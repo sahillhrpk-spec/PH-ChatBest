@@ -1,0 +1,7 @@
+{
+  "name": "PH ChatBest",
+  "description": "A modern AI chat application with a clean, minimal design, similar to PH ChatBest. It supports real-time messaging with an AI, markdown formatting, and conversation history, all powered by the Gemini API.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
