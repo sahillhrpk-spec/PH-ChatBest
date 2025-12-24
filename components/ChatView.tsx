@@ -1,7 +1,8 @@
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import type { Conversation, Message, AspectRatio } from '../types';
 import { generateUUID } from '../utils/uuid';
-import { createChat, generateImage, upscaleImage, superResolveImage } from '../services/geminiService';
+import { createChat, generateImage, upscaleImage, superResolveImage, translateText } from '../services/geminiService';
 import { ChatMessage } from './ChatMessage';
 import { TypingIndicator } from './TypingIndicator';
 import { SendIcon, MicIcon, StopIcon, PaperclipIcon, XIcon, MessageIcon, ImageIcon, SquareIcon, LandscapeIcon, PortraitIcon, ChevronDownIcon, SparklesIcon } from './IconComponents';
@@ -15,6 +16,21 @@ interface ChatViewProps {
 
 type Mode = 'chat' | 'image';
 
+const LanguageButton: React.FC<{
+  language: 'English' | 'Urdu' | 'Hindi';
+  onClick: () => void;
+  disabled: boolean;
+}> = ({ language, onClick, disabled }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className="px-3 py-1.5 text-xs font-medium rounded-md transition-colors bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+    {language}
+  </button>
+);
+
+
 export const ChatView: React.FC<ChatViewProps> = ({ conversation, onMessagesChange }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -23,6 +39,8 @@ export const ChatView: React.FC<ChatViewProps> = ({ conversation, onMessagesChan
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('1:1');
   const [is6KMode, setIs6KMode] = useState(false); // New state for 6K mode
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -248,6 +266,23 @@ export const ChatView: React.FC<ChatViewProps> = ({ conversation, onMessagesChan
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
+  const handleTranslate = useCallback(async (language: 'English' | 'Urdu' | 'Hindi') => {
+    const trimmedInput = input.trim();
+    if (!trimmedInput || isLoading || isTranslating) return;
+
+    setIsTranslating(true);
+    try {
+      const translatedText = await translateText(trimmedInput, language);
+      setInput(translatedText);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Translation failed.";
+      alert(errorMessage); 
+      console.error(error);
+    } finally {
+      setIsTranslating(false);
+    }
+  }, [input, isLoading, isTranslating]);
+
   const ModeButton: React.FC<{
     label: string,
     icon: React.ReactNode,
@@ -349,6 +384,19 @@ export const ChatView: React.FC<ChatViewProps> = ({ conversation, onMessagesChan
                 </div>
             </div>
         )}
+        
+        <div className="flex items-center gap-2 mb-2">
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Translate prompt to:</span>
+            <LanguageButton language="English" onClick={() => handleTranslate('English')} disabled={isTranslating || !input.trim()} />
+            <LanguageButton language="Urdu" onClick={() => handleTranslate('Urdu')} disabled={isTranslating || !input.trim()} />
+            <LanguageButton language="Hindi" onClick={() => handleTranslate('Hindi')} disabled={isTranslating || !input.trim()} />
+            {isTranslating && (
+              <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                <span>Translating...</span>
+              </div>
+            )}
+        </div>
 
         {attachment && mode === 'chat' && (
             <div className="relative w-24 h-24 mb-2 p-1 border rounded-md border-gray-300 dark:border-gray-600">

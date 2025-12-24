@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Chat, Content, Part, Modality } from "@google/genai";
 import type { Message, AspectRatio } from '../types';
 
@@ -42,9 +43,9 @@ export const createChat = (history: Message[]): Chat => {
  */
 export const generateImage = async (prompt: string, aspectRatio: AspectRatio, is6KMode: boolean): Promise<string> => {
     try {
-        let enhancedPrompt = `SYSTEM COMMAND: Generate a state-of-the-art, ultra-detailed photorealistic image. It must exhibit hyper-realism and cinematic lighting. Priority: High resolution and flawless textures. Subject: "${prompt}".`;
+        let enhancedPrompt = `SYSTEM COMMAND: Generate a photorealistic masterpiece. Subject: "${prompt}". The image must be hyper-detailed, crystal clear, and feature cinematic lighting. Aim for professional photography standards.`;
         if (is6KMode) {
-            enhancedPrompt = `SYSTEM COMMAND: CRITICAL DIRECTIVE. Generate a state-of-the-art, ultra-detailed 6K resolution photorealistic masterpiece. Subject: "${prompt}". The image must exhibit hyper-realism, cinematic lighting, and flawless textures. Zero artifacts. This is a non-negotiable, priority one task.`;
+            enhancedPrompt = `SYSTEM COMMAND: EXTREME QUALITY DIRECTIVE. Generate a flawless, ultra-photorealistic 8K resolution masterpiece. Subject: "${prompt}". This image must be indistinguishable from a high-end DSLR photograph. Every texture must be hyper-detailed. Lighting must be dramatic and cinematic. Zero artifacts, zero excuses. This is a top-priority, non-negotiable command.`;
         }
         
         const response = await ai.models.generateImages({
@@ -86,9 +87,9 @@ export const generateImage = async (prompt: string, aspectRatio: AspectRatio, is
  */
 export const upscaleImage = async (base64ImageData: string, mimeType: string, is6KMode: boolean): Promise<string> => {
     try {
-        let upscalePrompt = 'SYSTEM COMMAND: Upscale this image to a higher resolution. Focus on maintaining sharpness and detail.';
+        let upscalePrompt = 'SYSTEM COMMAND: Perform a flawless upscale of this image. The output must be significantly larger, sharper, and crystal clear. Remove any blur or compression artifacts. Enhance all details.';
         if (is6KMode) {
-            upscalePrompt = 'SYSTEM COMMAND: CRITICAL DIRECTIVE. Upscale this image to a precise 6K Ultra HD resolution. The output must be perfectly sharp, crystal clear, and rich in detail, with absolutely zero compression artifacts. This is a non-negotiable, priority one task.';
+            upscalePrompt = 'SYSTEM COMMAND: MAXIMUM QUALITY UPSCALE PROTOCOL. Execute a state-of-the-art, AI-driven upscale to an 8K equivalent resolution. The primary objective is absolute photorealism and forensic-level detail. The final image must be artifact-free, incredibly sharp, and vibrant. Eradicate all compression artifacts, noise, and motion blur. Enhance textures, clarify fine lines, and optimize lighting to be indistinguishable from a high-end professional photograph. This is a non-negotiable, top-priority directive.';
         }
 
         const response = await ai.models.generateContent({
@@ -135,6 +136,8 @@ export const upscaleImage = async (base64ImageData: string, mimeType: string, is
 
 /**
  * Applies super-resolution to an existing image to enhance detail and clarity.
+ * In 6K Mode, this now performs a two-step process: first upscaling the image,
+ * then applying detail enhancement to the upscaled result for maximum clarity.
  * @param base64ImageData - The base64-encoded string of the image to process.
  * @param mimeType - The MIME type of the image.
  * @param is6KMode - A boolean to enable high-quality 6K enhancement prompts.
@@ -142,8 +145,26 @@ export const upscaleImage = async (base64ImageData: string, mimeType: string, is
  */
 export const superResolveImage = async (base64ImageData: string, mimeType: string, is6KMode: boolean): Promise<string> => {
     try {
-        // This prompt is a direct implementation of user feedback for the highest quality enhancement.
-        const resolvePrompt = `SYSTEM COMMAND: CRITICAL DIRECTIVE. Regenerate this image in ultra-realistic 6K quality, keeping all original details, lighting, and colors exactly the same, but enhance sharpness, texture, and depth for a high-resolution professional look.`;
+        let imageDataForProcessing = base64ImageData;
+        let mimeTypeForProcessing = mimeType;
+
+        // In 6K mode, perform a two-step enhancement: upscale first, then resolve detail.
+        if (is6KMode) {
+            console.log("6K Mode: Starting Stage 1 - Upscaling...");
+            // Stage 1: Upscale the image to get a better base for enhancement.
+            const upscaledImageResult = await upscaleImage(base64ImageData, mimeType, true);
+            
+            // Prepare the upscaled image for the next stage.
+            imageDataForProcessing = upscaledImageResult.split(',')[1];
+            mimeTypeForProcessing = upscaledImageResult.match(/data:(image\/[^;]+);/)?.[1] || 'image/png';
+            console.log("6K Mode: Stage 1 Complete. Starting Stage 2 - Detail Enhancement...");
+        }
+
+        // Stage 2: Apply detail enhancement prompt.
+        let resolvePrompt = 'SYSTEM COMMAND: Enhance this image to be perfectly sharp and clear. Focus on refining details and textures. Remove all blurriness without altering the composition.';
+        if (is6KMode) {
+            resolvePrompt = `SYSTEM COMMAND: CRYSTAL CLARITY ENHANCEMENT. Your sole objective is to make this image flawlessly sharp and perfectly clear. Execute a master-level super-resolution and detail restoration process. The goal is unparalleled clarity, removing all atmospheric haze, softness, and digital noise. Sharpen edges without creating halos. Restore fine textures and micro-details. The result must be a pristine, high-resolution image that looks like it was captured with a prime lens on a professional camera. This is a command for absolute perfection.`;
+        }
         
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image',
@@ -151,8 +172,8 @@ export const superResolveImage = async (base64ImageData: string, mimeType: strin
                 parts: [
                     {
                         inlineData: {
-                            data: base64ImageData,
-                            mimeType: mimeType,
+                            data: imageDataForProcessing,
+                            mimeType: mimeTypeForProcessing,
                         },
                     },
                     {
@@ -167,6 +188,7 @@ export const superResolveImage = async (base64ImageData: string, mimeType: strin
 
         for (const part of response.candidates[0].content.parts) {
             if (part.inlineData) {
+                console.log("6K Mode: Stage 2 Complete.");
                 const base64ImageBytes: string = part.inlineData.data;
                 const newMimeType = part.inlineData.mimeType;
                 return `data:${newMimeType};base64,${base64ImageBytes}`;
@@ -184,5 +206,43 @@ export const superResolveImage = async (base64ImageData: string, mimeType: strin
             throw new Error(error.message);
         }
         throw new Error('An unknown error occurred during super-resolution.');
+    }
+};
+
+/**
+ * Translates a given text to a target language using the Gemini API.
+ * @param text - The text to translate.
+ * @param targetLanguage - The language to translate the text into (e.g., "Urdu", "Hindi").
+ * @returns The translated text as a string.
+ */
+export const translateText = async (text: string, targetLanguage: string): Promise<string> => {
+    if (!text.trim()) {
+        return text;
+    }
+
+    try {
+        const prompt = `Translate the following text to ${targetLanguage}.
+        Provide only the raw, translated text, without any additional explanations, introductory phrases, or markdown formatting.
+        For example, if asked to translate "Hello world" to Spanish, the output should be exactly "Hola mundo".
+        
+        Text to translate:
+        "${text}"`;
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+        });
+        
+        return response.text.trim();
+
+    } catch (error) {
+        console.error(`Error translating text to ${targetLanguage}:`, error);
+        if (error instanceof Error) {
+             if (error.message.includes('SAFETY')) {
+                throw new Error('Translation blocked due to safety policies. Please modify the text.');
+            }
+            throw new Error(`Failed to translate text: ${error.message}`);
+        }
+        throw new Error('An unknown error occurred during translation.');
     }
 };
