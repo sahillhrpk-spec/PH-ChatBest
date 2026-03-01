@@ -1,11 +1,11 @@
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import type { Conversation, Message, AspectRatio } from '../types';
 import { generateUUID } from '../utils/uuid';
 import { createChat, generateImage, upscaleImage, superResolveImage, translateText } from '../services/geminiService';
 import { ChatMessage } from './ChatMessage';
 import { TypingIndicator } from './TypingIndicator';
-import { SendIcon, MicIcon, StopIcon, PaperclipIcon, XIcon, MessageIcon, ImageIcon, SquareIcon, LandscapeIcon, PortraitIcon, ChevronDownIcon, SparklesIcon } from './IconComponents';
+// Added CheckIcon to the list of imported icons from IconComponents
+import { SendIcon, MicIcon, StopIcon, PaperclipIcon, XIcon, MessageIcon, ImageIcon, SquareIcon, LandscapeIcon, PortraitIcon, ChevronDownIcon, SparklesIcon, FileTextIcon, CopyIcon, DownloadIcon, CheckIcon } from './IconComponents';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { Chat, Part } from '@google/genai';
 
@@ -37,9 +37,10 @@ export const ChatView: React.FC<ChatViewProps> = ({ conversation, onMessagesChan
   const [attachment, setAttachment] = useState<{ file: File; url: string } | null>(null);
   const [mode, setMode] = useState<Mode>('chat');
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('1:1');
-  const [is6KMode, setIs6KMode] = useState(false); // New state for 6K mode
+  const [is6KMode, setIs6KMode] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [isCopyingAll, setIsCopyingAll] = useState(false);
 
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -80,6 +81,13 @@ export const ChatView: React.FC<ChatViewProps> = ({ conversation, onMessagesChan
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
   };
+
+  const handleUpdateMessage = useCallback((messageId: string, newContent: string) => {
+    const updatedMessages = conversation.messages.map(m => 
+      m.id === messageId ? { ...m, content: newContent } : m
+    );
+    onMessagesChange(conversation.id, updatedMessages);
+  }, [conversation.id, conversation.messages, onMessagesChange]);
   
   const handleSend = useCallback(async () => {
     const trimmedInput = input.trim();
@@ -111,7 +119,14 @@ export const ChatView: React.FC<ChatViewProps> = ({ conversation, onMessagesChan
           id: generateUUID(),
           role: 'user',
           content: trimmedInput,
-          ...(attachment && { attachment: { url: attachment.url, mimeType: attachment.file.type } })
+          ...(attachment && { 
+            attachment: { 
+              url: attachment.url, 
+              mimeType: attachment.file.type, 
+              name: attachment.file.name, 
+              size: attachment.file.size 
+            } 
+          })
         };
     
         const updatedMessages = [...conversation.messages, userMessage];
@@ -160,7 +175,6 @@ export const ChatView: React.FC<ChatViewProps> = ({ conversation, onMessagesChan
   }, [input, isLoading, conversation, onMessagesChange, attachment, mode, aspectRatio, is6KMode]);
   
   const handleUpscaleImage = useCallback(async (messageId: string, imageUrl: string) => {
-    // Set loading state for the specific message
     onMessagesChange(conversation.id, conversation.messages.map(m => 
         m.id === messageId ? { ...m, isUpscaling: true, error: undefined } : m
     ));
@@ -168,21 +182,12 @@ export const ChatView: React.FC<ChatViewProps> = ({ conversation, onMessagesChan
     try {
         const base64Data = imageUrl.split(',')[1];
         const mimeType = imageUrl.match(/data:(image\/[^;]+);/)?.[1] || 'image/png';
-        
-        if (!base64Data || !mimeType) {
-            throw new Error("Invalid image URL format.");
-        }
-
         const newImageUrl = await upscaleImage(base64Data, mimeType, is6KMode);
-
-        // Update the message with the new image
         onMessagesChange(conversation.id, conversation.messages.map(m => 
             m.id === messageId ? { ...m, isUpscaling: false, generatedImage: newImageUrl } : m
         ));
-
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during upscaling.';
-        // Update the message with an error
         onMessagesChange(conversation.id, conversation.messages.map(m => 
             m.id === messageId ? { ...m, isUpscaling: false, error: errorMessage } : m
         ));
@@ -190,7 +195,6 @@ export const ChatView: React.FC<ChatViewProps> = ({ conversation, onMessagesChan
   }, [conversation.id, conversation.messages, onMessagesChange, is6KMode]);
 
   const handleSuperResolveImage = useCallback(async (messageId: string, imageUrl: string) => {
-    // Set loading state for the specific message
     onMessagesChange(conversation.id, conversation.messages.map(m => 
         m.id === messageId ? { ...m, isSuperResolving: true, error: undefined } : m
     ));
@@ -198,21 +202,12 @@ export const ChatView: React.FC<ChatViewProps> = ({ conversation, onMessagesChan
     try {
         const base64Data = imageUrl.split(',')[1];
         const mimeType = imageUrl.match(/data:(image\/[^;]+);/)?.[1] || 'image/png';
-        
-        if (!base64Data || !mimeType) {
-            throw new Error("Invalid image URL format.");
-        }
-
         const newImageUrl = await superResolveImage(base64Data, mimeType, is6KMode);
-
-        // Update the message with the new image
         onMessagesChange(conversation.id, conversation.messages.map(m => 
             m.id === messageId ? { ...m, isSuperResolving: false, generatedImage: newImageUrl } : m
         ));
-
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during super resolution.';
-        // Update the message with an error
         onMessagesChange(conversation.id, conversation.messages.map(m => 
             m.id === messageId ? { ...m, isSuperResolving: false, error: errorMessage } : m
         ));
@@ -252,7 +247,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ conversation, onMessagesChan
   const handleScroll = useCallback(() => {
     const container = chatContainerRef.current;
     if (container) {
-      const threshold = 100; // pixels from the bottom
+      const threshold = 100;
       const isAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + threshold;
       if (showScrollToBottom && isAtBottom) {
         setShowScrollToBottom(false);
@@ -275,13 +270,57 @@ export const ChatView: React.FC<ChatViewProps> = ({ conversation, onMessagesChan
       const translatedText = await translateText(trimmedInput, language);
       setInput(translatedText);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Translation failed.";
-      alert(errorMessage); 
-      console.error(error);
+      alert("Translation failed.");
     } finally {
       setIsTranslating(false);
     }
   }, [input, isLoading, isTranslating]);
+
+  const handleCopyChat = () => {
+    if (conversation.messages.length === 0) return;
+    setIsCopyingAll(true);
+    const transcript = conversation.messages
+        .map(m => `${m.role.toUpperCase()}: ${m.content}`)
+        .join('\n\n---\n\n');
+    
+    navigator.clipboard.writeText(transcript).then(() => {
+        setTimeout(() => setIsCopyingAll(false), 2000);
+    });
+  };
+
+  const handleDownloadChat = () => {
+    if (conversation.messages.length === 0) return;
+    
+    // Create a special hidden element for printing
+    const printView = document.createElement('div');
+    printView.style.padding = '40px';
+    printView.style.fontFamily = 'sans-serif';
+    printView.innerHTML = `
+        <h1 style="color:#6366f1; border-bottom:2px solid #6366f1; padding-bottom:10px;">Chat Transcript: ${conversation.title}</h1>
+        <p style="color:#666; font-size:12px;">Generated on: ${new Date().toLocaleString()}</p>
+        <div style="margin-top:20px;">
+            ${conversation.messages.map(m => `
+                <div style="margin-bottom:20px; padding:15px; border-radius:10px; background:${m.role === 'user' ? '#f3f4f6' : '#eff6ff'}">
+                    <b style="color:${m.role === 'user' ? '#374151' : '#4f46e5'}">${m.role.toUpperCase()}</b>
+                    <p style="margin-top:5px; white-space:pre-wrap; line-height:1.5;">${m.content}</p>
+                </div>
+            `).join('')}
+        </div>
+        <footer style="margin-top:40px; text-align:center; color:#999; font-size:10px;">Powered by PH ChatBest</footer>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+        printWindow.document.write('<html><head><title>Export Chat</title></head><body>');
+        printWindow.document.body.appendChild(printView);
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 500);
+    }
+  };
 
   const ModeButton: React.FC<{
     label: string,
@@ -323,8 +362,26 @@ export const ChatView: React.FC<ChatViewProps> = ({ conversation, onMessagesChan
 
   return (
     <div className="flex flex-col h-full">
-      <header className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h2 className="text-lg font-semibold truncate">{conversation.title}</h2>
+      <header className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <h2 className="text-lg font-semibold truncate max-w-md">{conversation.title}</h2>
+        <div className="flex items-center gap-2">
+            <button
+                onClick={handleCopyChat}
+                className={`p-2 rounded-lg transition-all flex items-center gap-2 ${isCopyingAll ? 'bg-green-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500'}`}
+                title="Copy entire chat"
+            >
+                {isCopyingAll ? <CheckIcon className="w-5 h-5" /> : <CopyIcon className="w-5 h-5" />}
+                <span className="text-xs font-bold uppercase hidden sm:inline">{isCopyingAll ? 'Copied' : 'Copy'}</span>
+            </button>
+            <button
+                onClick={handleDownloadChat}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-all flex items-center gap-2"
+                title="Download chat as PDF/Transcript"
+            >
+                <DownloadIcon className="w-5 h-5" />
+                <span className="text-xs font-bold uppercase hidden sm:inline">Export</span>
+            </button>
+        </div>
       </header>
       <div className="relative flex-1">
         <div
@@ -333,7 +390,13 @@ export const ChatView: React.FC<ChatViewProps> = ({ conversation, onMessagesChan
           className="absolute inset-0 overflow-y-auto p-4 space-y-4"
         >
           {conversation.messages.map((msg) => (
-            <ChatMessage key={msg.id} message={msg} onUpscale={handleUpscaleImage} onSuperResolve={handleSuperResolveImage} />
+            <ChatMessage 
+                key={msg.id} 
+                message={msg} 
+                onUpscale={handleUpscaleImage} 
+                onSuperResolve={handleSuperResolveImage}
+                onUpdateMessage={handleUpdateMessage}
+            />
           ))}
           {isLoading && mode === 'chat' && <TypingIndicator />}
           <div ref={messagesEndRef} />
@@ -341,7 +404,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ conversation, onMessagesChan
         {showScrollToBottom && (
           <button
             onClick={scrollToBottom}
-            className="absolute bottom-4 right-4 z-10 p-2 rounded-full bg-indigo-500 text-white shadow-lg hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-opacity"
+            className="absolute bottom-4 right-4 z-10 p-2 rounded-full bg-indigo-500 text-white shadow-lg hover:bg-indigo-600 transition-opacity"
             aria-label="Scroll to bottom"
           >
             <ChevronDownIcon className="w-6 h-6" />
@@ -385,28 +448,37 @@ export const ChatView: React.FC<ChatViewProps> = ({ conversation, onMessagesChan
             </div>
         )}
         
-        <div className="flex items-center gap-2 mb-2">
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Translate prompt to:</span>
+        <div className="flex items-center gap-2 mb-2 overflow-x-auto no-scrollbar">
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400 flex-shrink-0">Translate to:</span>
             <LanguageButton language="English" onClick={() => handleTranslate('English')} disabled={isTranslating || !input.trim()} />
             <LanguageButton language="Urdu" onClick={() => handleTranslate('Urdu')} disabled={isTranslating || !input.trim()} />
             <LanguageButton language="Hindi" onClick={() => handleTranslate('Hindi')} disabled={isTranslating || !input.trim()} />
             {isTranslating && (
               <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
                 <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                <span>Translating...</span>
               </div>
             )}
         </div>
 
         {attachment && mode === 'chat' && (
-            <div className="relative w-24 h-24 mb-2 p-1 border rounded-md border-gray-300 dark:border-gray-600">
-                <img src={attachment.url} alt="Attachment preview" className="w-full h-full object-cover rounded-md" />
+            <div className="relative w-fit mb-2 p-1 border rounded-md border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 flex items-center gap-3 pr-8">
+                {attachment.file.type === 'application/pdf' ? (
+                   <div className="flex items-center gap-2 p-2">
+                        <FileTextIcon className="w-8 h-8 text-red-500" />
+                        <div className="flex flex-col">
+                            <span className="text-sm font-medium truncate max-w-[150px]">{attachment.file.name}</span>
+                            <span className="text-xs text-gray-500">{(attachment.file.size / 1024).toFixed(1)} KB</span>
+                        </div>
+                   </div>
+                ) : (
+                    <img src={attachment.url} alt="Attachment" className="w-16 h-16 object-cover rounded-md" />
+                )}
                 <button 
                     onClick={handleRemoveAttachment} 
-                    className="absolute -top-2 -right-2 bg-gray-700 text-white rounded-full p-0.5 hover:bg-red-500"
+                    className="absolute top-1 right-1 bg-gray-700 text-white rounded-full p-0.5 hover:bg-red-500"
                     aria-label="Remove attachment"
                 >
-                    <XIcon className="w-4 h-4" />
+                    <XIcon className="w-3 h-3" />
                 </button>
             </div>
         )}
@@ -414,7 +486,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ conversation, onMessagesChan
         <div className="relative flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg">
             {mode === 'chat' && (
                 <>
-                    <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*" className="hidden" />
+                    <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*,application/pdf" className="hidden" />
                     <button
                         onClick={() => fileInputRef.current?.click()}
                         className="p-3 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
@@ -429,7 +501,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ conversation, onMessagesChan
             value={input}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder={mode === 'chat' ? "Type your message or attach an image..." : "Describe the image you want to create..."}
+            placeholder={mode === 'chat' ? "Type message, attach image or PDF..." : "Describe the image..."}
             rows={1}
             className="w-full bg-transparent p-3 pr-28 text-gray-800 dark:text-gray-200 resize-none focus:outline-none max-h-40"
             disabled={isLoading}
@@ -449,7 +521,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ conversation, onMessagesChan
             <button
               onClick={handleSend}
               disabled={(!input.trim() && (mode === 'chat' ? !attachment : true)) || isLoading}
-              className="ml-2 p-2 rounded-full bg-indigo-500 text-white disabled:bg-gray-400 dark:disabled:bg-gray-500 hover:bg-indigo-600 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="ml-2 p-2 rounded-full bg-indigo-500 text-white disabled:bg-gray-400 hover:bg-indigo-600 transition-colors"
               aria-label="Send message"
             >
               <SendIcon className="w-5 h-5" />

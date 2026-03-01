@@ -10,8 +10,10 @@ export interface Message {
   role: 'user' | 'model'; // The sender of the message.
   content: string;
   attachment?: {
-    url: string; // Data URL for image preview
+    url: string; // Data URL for preview
     mimeType: string;
+    name?: string; // Filename for documents
+    size?: number; // File size in bytes
   };
   // For model-generated images
   generatedImage?: string; // Data URL of the generated image

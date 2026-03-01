@@ -113,6 +113,16 @@ export const ImageIcon: React.FC<IconProps> = (props) => (
     </svg>
 );
 
+export const FileTextIcon: React.FC<IconProps> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+    <polyline points="14 2 14 8 20 8"></polyline>
+    <line x1="16" y1="13" x2="8" y2="13"></line>
+    <line x1="16" y1="17" x2="8" y2="17"></line>
+    <line x1="10" y1="9" x2="8" y2="9"></line>
+  </svg>
+);
+
 export const DownloadIcon: React.FC<IconProps> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -176,6 +186,12 @@ export const ChevronDownIcon: React.FC<IconProps> = (props) => (
   </svg>
 );
 
+export const PencilIcon: React.FC<IconProps> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+  </svg>
+);
+
 export const ShieldIcon: React.FC<IconProps> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
@@ -226,7 +242,50 @@ export const EyeIcon: React.FC<IconProps> = (props) => (
 
 export const EyeOffIcon: React.FC<IconProps> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45(0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
     <line x1="1" y1="1" x2="23" y2="23"></line>
+  </svg>
+);
+
+export const CrownIcon: React.FC<IconProps> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"></path>
+  </svg>
+);
+
+export const VideoIcon: React.FC<IconProps> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+    <polygon points="10 8 14 10 10 12 10 8"></polygon>
+    <line x1="2" y1="17" x2="22" y2="17"></line>
+    <line x1="7" y1="17" x2="7" y2="21"></line>
+    <line x1="17" y1="17" x2="17" y2="21"></line>
+  </svg>
+);
+
+export const GifIcon: React.FC<IconProps> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <circle cx="12" cy="12" r="10"></circle>
+    <path d="M11 8h-2v8h2"></path>
+    <path d="M11 12h-1"></path>
+    <path d="M15 8h-2v8"></path>
+    <path d="M15 12h-2"></path>
+  </svg>
+);
+
+export const PPTXIcon: React.FC<IconProps> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <rect x="3" y="3" width="18" height="14" rx="2"></rect>
+    <path d="M3 13h18"></path>
+    <path d="M12 17v4"></path>
+    <path d="M9 21h6"></path>
+    <circle cx="12" cy="8" r="2"></circle>
+  </svg>
+);
+
+export const PlayCircleIcon: React.FC<IconProps> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <circle cx="12" cy="12" r="10"></circle>
+    <polygon points="10 8 16 12 10 16 10 8"></polygon>
   </svg>
 );
